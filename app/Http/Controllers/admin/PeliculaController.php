@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 // Importar clases del modelo
 use App\Pelicula;
 use App\Genero;
+use App\Director;
+use App\Imagen;
 // Importar clase request de validacion
 use App\Http\Requests\PeliculaCreateRequest;
 
@@ -47,8 +49,13 @@ class PeliculaController extends Controller
 
         }
         */
-        $data['generos'] = null;
-        return view('admin.pelicula.create',$data);
+        $data['generos']= Genero::OrderBy('genero','ASC')->pluck('genero','id');
+        //dd( $data['generos']);
+        //Obteneer el listado de los directores
+        $data['directores']= Director::OrderBy('nombre','ASC')->pluck('nombre','id');
+       // $data['generos'] = null;
+        //dd( $data['generos']);
+       return view('admin.pelicula.create',$data);
     }
 
     /**
@@ -67,11 +74,26 @@ class PeliculaController extends Controller
         //$pelicula->password = bcrypt($pelicula->password);
         // 3. Guardar en la base de datos
         $pelicula->user_id = 2;
-        $pelicula->genero_id = 1;
+        $pelicula->genero_id = $request->genero_id;
         $pelicula->save();
-        // 4. Mostrar mensaje
+        $pelicula->directores()->sync($request->directores);
+        $file_name ='';
+        if($request->file('imagen'))
+        {
+          $file  = $request->file('imagen');
+          $file_name = 'cinema_'.time().'.'.$file->getClientOriginalExtension();
+          $file_path = public_path().'/imagenes/pelicula';
+          $file->move($file_path, $file_name);
+        }
+
+        $imagen = new Imagen();
+        $imagen->nombre = $file_name;
+        $imagen->pelicula()->associate($pelicula);
+        $imagen->save();
+
+
         //return 'Usuario registrado correctamente';
-        flash('Usuario registrado correctamente')->success();
+        flash('Pelicula registrado correctamente')->success();
         // 5. Redireccionar a listado de usuarios
         return redirect()->route('pelicula.index');
     }
@@ -99,6 +121,16 @@ class PeliculaController extends Controller
         $pelicula = Pelicula::find($id);
         // dd($pelicula);
         $data['pelicula'] = $pelicula;
+        $data['generos']= Genero::OrderBy('genero','ASC')->pluck('genero','id');
+        //dd( $data['generos']);
+        //Obteneer el listado de los directores
+        $data['directores']= Director::OrderBy('nombre','ASC')->pluck('nombre','id');
+
+        $data['directoressel'] = $pelicula->directores();
+        $data['imagensel'] = $pelicula->imagenes();
+        //dd( $pelicula->imagenes()->first());
+        //$imagen = Imagen::find($id);
+        $data['imagensel'] =  $pelicula->imagenes()->first()->nombre;
         //$generos = Genero::orderBy('id', 'DESC')->orderBy('genero')->lists('genero', 'id'); // Obtener los registros ordenados y paginados
         // Enviar listado de registros a una vista
         //$data['generos'] = $generos;
@@ -119,17 +151,33 @@ class PeliculaController extends Controller
         // 1. Buscar registro a modificar
         $pelicula = Pelicula::find($id);
         // 2. Editar valores
-        $pelicula->titulo = $request->titulo;
-        $pelicula->costo = $request->costo;
-        $pelicula->resumen = $request->resumen;
-        $pelicula->estreno = $request->estreno;
-        $pelicula->genero_id = 1;
         $pelicula->user_id = 2;
-        // 3. Guardar cambios
+        $pelicula->genero_id = $request->genero_id;
         $pelicula->save();
-        // 4. Preparar mensaje
-        flash('Pelicula editado correctamente')->success();
-        // 5. Redireccionar
+        $pelicula->directores()->sync($request->directores);
+        $file_name ='';
+        if($request->file('imagen'))
+        {
+            $imagenlast = Imagen::find($pelicula->imagenes()->first()->id);
+            if($imagenlast){
+                $imagenlast->delete();
+            }
+
+          $file  = $request->file('imagen');
+          $file_name = 'cinema_'.time().'.'.$file->getClientOriginalExtension();
+          $file_path = public_path().'/imagenes/pelicula';
+          $file->move($file_path, $file_name);
+        }
+
+        $imagen = new Imagen();
+        $imagen->nombre = $file_name;
+        $imagen->pelicula()->associate($pelicula);
+        $imagen->save();
+
+
+        //return 'Usuario registrado correctamente';
+        flash('Pelicula modificada correctamente')->success();
+        // 5. Redireccionar a listado de usuarios
         return redirect()->route('pelicula.index');
     }
 

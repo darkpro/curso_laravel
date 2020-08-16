@@ -32,6 +32,7 @@ class Pelicula extends Model
     // Una pelicula tiene varias imagenes
     public function imagenes(){
         // Retornar tipo de relacion
+        //return $this->hasMany('App\Imagen');
         return $this->hasMany('App\Imagen');
     }
 
